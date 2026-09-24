@@ -1,2 +1,2 @@
 # AgentGuard
-Signal-Fused Intrusion Detection &amp; Response Prioritization for AI Agents
+Signal-Fused Intrusion Detection and Response Prioritization for Autonomous AI Agents
