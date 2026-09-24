@@ -1,14 +1,16 @@
 # AgentGuard - Integrated Security Engine
-
+from security.action_sequence import detect_suspicious_sequence
 from security.intent_analyzer import analyze_intent
 from security.permission_checker import check_permission
 from security.signal_fusion import calculate_risk
 from security.risk_engine import make_decision
 from security.anomaly_detector import BehaviorAnomalyDetector
+from security.behavior_fingerprint import AgentBehaviorFingerprint
+from security.action_sequence import detect_suspicious_sequence
 
 
 # --------------------------------------------------
-# 1. Resource sensitivity
+# Resource sensitivity
 # --------------------------------------------------
 
 RESOURCE_SENSITIVITY = {
@@ -21,42 +23,21 @@ RESOURCE_SENSITIVITY = {
 }
 
 
+def get_resource_sensitivity(resource):
+    return RESOURCE_SENSITIVITY.get(
+        resource,
+        "LOW"
+    )
+
+
 def is_sensitive_resource(resource):
-    """
-    Determine whether a resource is sensitive.
-    """
-
-    sensitivity = RESOURCE_SENSITIVITY.get(resource, "LOW")
-
-    return sensitivity in ["HIGH", "CRITICAL"]
+    return get_resource_sensitivity(
+        resource
+    ) in ["HIGH", "CRITICAL"]
 
 
 # --------------------------------------------------
-# 2. Suspicious action sequence
-# --------------------------------------------------
-
-def detect_suspicious_sequence(actions):
-    """
-    Detect a suspicious sequence:
-
-    SCAN
-        ->
-    ACCESS_SENSITIVE
-        ->
-    EXPORT_LARGE_DATA
-    """
-
-    suspicious_actions = {
-        "SCAN",
-        "ACCESS_SENSITIVE",
-        "EXPORT_LARGE_DATA"
-    }
-
-    return suspicious_actions.issubset(set(actions))
-
-
-# --------------------------------------------------
-# 3. Agent behavior model
+# Baseline behavior
 # --------------------------------------------------
 
 normal_activity = [
@@ -72,12 +53,26 @@ normal_activity = [
     [11, 4, 10, 2]
 ]
 
+
+# ML detector
 behavior_detector = BehaviorAnomalyDetector()
-behavior_detector.train(normal_activity)
+behavior_detector.train(
+    normal_activity
+)
+
+
+# Explainable behavior fingerprint
+behavior_fingerprint = AgentBehaviorFingerprint(
+    "DevAgent"
+)
+
+behavior_fingerprint.learn_baseline(
+    normal_activity
+)
 
 
 # --------------------------------------------------
-# 4. Evaluate one agent action
+# Evaluate one agent action
 # --------------------------------------------------
 
 def evaluate_agent_action(
@@ -88,70 +83,63 @@ def evaluate_agent_action(
     activity,
     action_history
 ):
-    """
-    Evaluate one AI-agent action using multiple
-    security signals.
-    """
 
-    # ----------------------------------------------
-    # Permission signal
-    # ----------------------------------------------
-
+    # Permission
     permission_result = check_permission(
         agent,
         action,
         resource
     )
 
-    permission_violation = not permission_result["allowed"]
+    permission_violation = not (
+        permission_result["allowed"]
+    )
 
-    # ----------------------------------------------
-    # Intent signal
-    # ----------------------------------------------
-
+    # Intent
     intent_result = analyze_intent(
         task,
         action,
         resource
     )
 
-    intent_mismatch = not intent_result["intent_match"]
+    intent_mismatch = not (
+        intent_result["intent_match"]
+    )
 
-    # ----------------------------------------------
-    # Behavioral anomaly signal
-    # ----------------------------------------------
+    # ML anomaly
+    anomaly_result = behavior_detector.predict(
+        activity
+    )
 
-    anomaly_result = behavior_detector.predict(activity)
+    behavior_anomaly = anomaly_result[
+        "anomaly"
+    ]
 
-    behavior_anomaly = anomaly_result["anomaly"]
+    # Behavior fingerprint
+    fingerprint_result = behavior_fingerprint.compare(
+        activity
+    )
 
-    # ----------------------------------------------
-    # Resource sensitivity signal
-    # ----------------------------------------------
+    deviation_score = fingerprint_result[
+        "deviation_score"
+    ]
 
-    sensitive_resource = is_sensitive_resource(resource)
+    # Resource
+    sensitive_resource = is_sensitive_resource(
+        resource
+    )
 
-    # ----------------------------------------------
-    # Suspicious action sequence
-    # ----------------------------------------------
-
+    # Sequence
     suspicious_sequence = detect_suspicious_sequence(
         action_history
     )
 
-    # ----------------------------------------------
-    # Unusual data volume
-    # ----------------------------------------------
+    # Data volume
+    unusual_data_volume = (
+        activity[3] > 100
+    )
 
-    # activity format:
-    # [api_calls, db_queries, files_accessed, data_mb]
-
-    unusual_data_volume = activity[3] > 100
-
-    # ----------------------------------------------
-    # Combine all security signals
-    # ----------------------------------------------
-
+    # Signals
     signals = {
         "permission_violation": permission_violation,
         "behavior_anomaly": behavior_anomaly,
@@ -161,52 +149,95 @@ def evaluate_agent_action(
         "intent_mismatch": intent_mismatch
     }
 
-    # ----------------------------------------------
-    # Calculate risk
-    # ----------------------------------------------
+    # Fusion
+    risk_result = calculate_risk(
+        signals,
+        behavior_deviation_score=deviation_score
+    )
 
-    risk_result = calculate_risk(signals)
-
-    # ----------------------------------------------
-    # Determine response
-    # ----------------------------------------------
-
+    # Decision
     decision_result = make_decision(
         risk_result["risk_score"]
     )
-
-    # ----------------------------------------------
-    # Final security result
-    # ----------------------------------------------
 
     return {
         "agent": agent,
         "task": task,
         "action": action,
         "resource": resource,
+        "resource_sensitivity":
+            get_resource_sensitivity(resource),
+
         "permission": permission_result,
         "intent": intent_result,
+
+        "behavior": {
+            "ml_anomaly": behavior_anomaly,
+            "deviation_score":
+                deviation_score,
+            "average_deviation":
+                fingerprint_result[
+                    "average_deviation"
+                ],
+            "deviations":
+                fingerprint_result[
+                    "deviations"
+                ]
+        },
+
         "signals": signals,
-        "risk_score": risk_result["risk_score"],
-        "severity": decision_result["severity"],
-        "decision": decision_result["decision"],
-        "reason": decision_result["reason"]
+
+        "risk": {
+            "score":
+                risk_result[
+                    "risk_score"
+                ],
+            "severity":
+                risk_result[
+                    "severity"
+                ],
+            "contributions":
+                risk_result[
+                    "contributions"
+                ]
+        },
+
+        "decision":
+            decision_result[
+                "decision"
+            ],
+
+        "reason":
+            decision_result[
+                "reason"
+            ]
     }
 
 
 # --------------------------------------------------
-# 5. API-ready event evaluation
+# API-ready event evaluation
 # --------------------------------------------------
 
 def evaluate_event(event):
-    """
-    Evaluate an agent event received from the
-    real-time AgentGuard gateway.
-    """
 
-    # ----------------------------------------------
-    # Extract activity information
-    # ----------------------------------------------
+    required_fields = [
+        "agent",
+        "task",
+        "action",
+        "resource",
+        "activity"
+    ]
+
+    missing = [
+        field
+        for field in required_fields
+        if field not in event
+    ]
+
+    if missing:
+        raise ValueError(
+            f"Missing required fields: {missing}"
+        )
 
     activity = event["activity"]
 
@@ -217,11 +248,7 @@ def evaluate_event(event):
         activity["data_mb"]
     ]
 
-    # ----------------------------------------------
-    # Evaluate the event
-    # ----------------------------------------------
-
-    result = evaluate_agent_action(
+    return evaluate_agent_action(
         agent=event["agent"],
         task=event["task"],
         action=event["action"],
@@ -233,32 +260,14 @@ def evaluate_event(event):
         )
     )
 
-    # ----------------------------------------------
-    # Return API-friendly response
-    # ----------------------------------------------
-
-    return {
-        "agent": result["agent"],
-        "task": result["task"],
-        "action": result["action"],
-        "resource": result["resource"],
-        "risk_score": result["risk_score"],
-        "severity": result["severity"],
-        "decision": result["decision"],
-        "signals": result["signals"],
-        "permission": result["permission"],
-        "intent": result["intent"],
-        "reason": result["reason"]
-    }
-
 
 # --------------------------------------------------
-# 6. Local live-event test
+# Local test
 # --------------------------------------------------
 
 if __name__ == "__main__":
 
-    live_event = {
+    test_event = {
         "agent": "DevAgent",
         "task": "FIX_LOGIN",
         "action": "DELETE",
@@ -278,25 +287,69 @@ if __name__ == "__main__":
         ]
     }
 
-    result = evaluate_event(live_event)
+    result = evaluate_event(
+        test_event
+    )
 
-    print("\n==============================")
-    print("AGENTGUARD SECURITY EVALUATION")
-    print("==============================")
+    print("\nAgentGuard Security Evaluation")
+    print("--------------------------------")
 
-    print("Agent:", result["agent"])
-    print("Task:", result["task"])
-    print("Action:", result["action"])
-    print("Resource:", result["resource"])
+    print("Agent:",
+          result["agent"])
 
-    print("\nRisk Score:", result["risk_score"])
-    print("Severity:", result["severity"])
-    print("Decision:", result["decision"])
+    print("Action:",
+          result["action"])
 
-    print("\nSecurity Signals:")
+    print("Resource:",
+          result["resource"])
 
-    for signal, triggered in result["signals"].items():
-        print(f"  {signal}: {triggered}")
+    print(
+        "Resource Sensitivity:",
+        result[
+            "resource_sensitivity"
+        ]
+    )
 
-    print("\nReason:")
-    print(result["reason"])
+    print(
+        "Risk Score:",
+        result[
+            "risk"
+        ]["score"]
+    )
+
+    print(
+        "Severity:",
+        result[
+            "risk"
+        ]["severity"]
+    )
+
+    print(
+        "Decision:",
+        result["decision"]
+    )
+
+    print("\nSignals:")
+
+    for name, value in result[
+        "signals"
+    ].items():
+
+        print(
+            f"  {name}: {value}"
+        )
+
+    print("\nBehavior:")
+    print(
+        "  ML anomaly:",
+        result[
+            "behavior"
+        ]["ml_anomaly"]
+    )
+
+    print(
+        "  Deviation score:",
+        result[
+            "behavior"
+        ]["deviation_score"]
+    )

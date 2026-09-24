@@ -1,6 +1,7 @@
 # AgentGuard - Agent Behavior Fingerprint
 
 from statistics import mean
+import math
 
 
 class AgentBehaviorFingerprint:
@@ -11,9 +12,9 @@ class AgentBehaviorFingerprint:
 
     def learn_baseline(self, activity_records):
         """
-        Learn the average behavior of an agent.
+        Learn the normal behavior baseline of an agent.
 
-        Each activity record:
+        Each record:
         [api_calls, db_queries, files_accessed, data_mb]
         """
 
@@ -37,7 +38,7 @@ class AgentBehaviorFingerprint:
 
     def compare(self, activity):
         """
-        Compare current activity against the learned baseline.
+        Compare current activity with the learned baseline.
         """
 
         if not self.baseline:
@@ -55,16 +56,16 @@ class AgentBehaviorFingerprint:
         for index, label in enumerate(labels):
 
             baseline_value = self.baseline[label]
-
             current_value = activity[index]
 
             if baseline_value == 0:
-                deviations[label] = 0
+                deviations[label] = 0.0
                 continue
 
-            deviation = abs(
-                current_value - baseline_value
-            ) / baseline_value
+            deviation = (
+                abs(current_value - baseline_value)
+                / baseline_value
+            )
 
             deviations[label] = deviation
 
@@ -72,43 +73,20 @@ class AgentBehaviorFingerprint:
             deviations.values()
         )
 
+        # Convert deviation into a bounded 0-1 score.
+        # This is a prototype heuristic, not a trained probability.
+        deviation_score = 1 - math.exp(
+            -average_deviation
+        )
+
         return {
             "agent": self.agent_name,
             "baseline": self.baseline,
             "current_activity": activity,
             "deviations": deviations,
-            "average_deviation": average_deviation
+            "average_deviation": average_deviation,
+            "deviation_score": round(
+                deviation_score,
+                4
+            )
         }
-
-
-if __name__ == "__main__":
-
-    normal_activity = [
-        [10, 5, 12, 2],
-        [12, 4, 15, 3],
-        [8, 6, 10, 2],
-        [11, 5, 13, 4],
-        [9, 4, 11, 3]
-    ]
-
-    fingerprint = AgentBehaviorFingerprint(
-        "DevAgent"
-    )
-
-    fingerprint.learn_baseline(
-        normal_activity
-    )
-
-    normal_test = [10, 5, 12, 3]
-
-    suspicious_test = [150, 200, 500, 800]
-
-    print("\nNORMAL BEHAVIOR")
-    print(
-        fingerprint.compare(normal_test)
-    )
-
-    print("\nSUSPICIOUS BEHAVIOR")
-    print(
-        fingerprint.compare(suspicious_test)
-    )
