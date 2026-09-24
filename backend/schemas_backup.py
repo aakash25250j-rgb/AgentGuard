@@ -36,16 +36,3 @@ class ActivityResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-class ActivityPayload(BaseModel):
-    agent: str
-    task: str
-    action: str
-    resource: str
-
-    api_calls: int = 10
-    db_queries: int = 5
-    files_accessed: int = 12
-    data_mb: float = 3
-
-    action_history: list[str] = []
