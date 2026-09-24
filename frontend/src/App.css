@@ -1,0 +1,190 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0b1120;
+  color: #e5e7eb;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 40px;
+  background: #111827;
+  border-bottom: 1px solid #263244;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.topbar p {
+  margin: 6px 0 0;
+  color: #94a3b8;
+}
+
+.status {
+  color: #22c55e;
+  font-weight: bold;
+}
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  background: #22c55e;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+main {
+  padding: 30px 40px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.card,
+.panel {
+  background: #111827;
+  border: 1px solid #263244;
+  border-radius: 12px;
+  padding: 22px;
+}
+
+.card h3 {
+  margin: 0 0 15px;
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+.card strong {
+  display: block;
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.card span {
+  color: #64748b;
+}
+
+.danger strong {
+  color: #ef4444;
+}
+
+.warning strong {
+  color: #f59e0b;
+}
+
+.panel {
+  margin-top: 24px;
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.risk-grid div {
+  padding: 20px;
+  background: #0f172a;
+  border-radius: 10px;
+}
+
+.risk-grid span {
+  display: block;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+.risk-grid strong {
+  font-size: 28px;
+}
+
+.critical {
+  color: #ef4444;
+}
+
+.high {
+  color: #f97316;
+}
+
+.medium {
+  color: #f59e0b;
+}
+
+.low {
+  color: #22c55e;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 15px;
+  border-bottom: 1px solid #263244;
+}
+
+th {
+  color: #94a3b8;
+}
+
+.badge {
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.critical-bg {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.high-bg {
+  background: #7c2d12;
+  color: #fed7aa;
+}
+
+@media (max-width: 900px) {
+  .stats,
+  .risk-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .stats,
+  .risk-grid {
+    grid-template-columns: 1fr;
+  }
+
+  main {
+    padding: 20px;
+  }
+
+  .topbar {
+    padding: 20px;
+  }
+}
